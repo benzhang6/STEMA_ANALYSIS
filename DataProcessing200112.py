@@ -141,7 +141,8 @@ def CurveChoice(sJiBie) : # 本函数功能 - 选择题核算发布分数，曲�
         if npCurveScore[i] == npCurveScore[i+1] :
             npPercentageScore[i] = npPercentageScore[i+1]
         else :
-            npPercentageScore[i] = math.ceil((i+1)/nStudentCount*100)/100
+            npPercentageScore[i] = math.floor((i+1)/nStudentCount*100)/100
+            if npPercentageScore[i]==0.00 : npPercentageScore[i] = 0.01
 
     # 计算需要填写的两列在表格中的列序号
     index1 = list(dfFinal.columns).index('第一部分成绩')
@@ -213,7 +214,8 @@ def CurveProgram(sJiBie, sZuBie) : # 本函数功能 - 编程题核算发布分�
         if npCurveScore[i] == npCurveScore[i+1] :
             npPercentageScore[i] = npPercentageScore[i+1]
         else :
-            npPercentageScore[i] = math.ceil((i+1)/nStudentCount*100)/100
+            npPercentageScore[i] = math.floor((i+1)/nStudentCount*100)/100
+            if npPercentageScore[i]==0.00 : npPercentageScore[i] = 0.01
 
     # 计算需要填写的两列在表格中的列序号
     index1 = list(dfFinal.columns).index('第二部分成绩')
@@ -271,13 +273,12 @@ def TotalPercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本级别本组�
     for i in range(nStudentCount-2, -1, -1) :
         if dfJiBieZuBie.iloc[i]['总成绩'] == dfJiBieZuBie.iloc[i+1]['总成绩'] :
             npPercentageScore[i] = npPercentageScore[i+1]
-            if isDebug : print("Debug Info ->", "分数并列，与上一人同样百分比", "序列号", i, "百分比", npPercentageScore[i], "%")
+            if isDebug : print("Debug Info ->", "分数并列，与上一人同样百分比", "序列号", i, "百分比", round(npPercentageScore[i]*100), "%")
         else :
-            npPercentageScore[i] = math.ceil((i+1)/nStudentCount*100)/100
-            # 做边界处理，避免向上取整之后，大于99%的成绩被写为100%
-            if npPercentageScore[i]==1.00 : npPercentageScore[i] = 0.99
+            npPercentageScore[i] = math.floor((i+1)/nStudentCount*100)/100
+            # 做边界处理，避免向下取整之后，小于1%的成绩被写为0%
             if npPercentageScore[i]==0.00 : npPercentageScore[i] = 0.01
-            if isDebug : print("Debug Info ->", "分数不同，计算新百分比", "序列号", i, "百分比", npPercentageScore[i], "%")
+            if isDebug : print("Debug Info ->", "分数不同，计算新百分比", "序列号", i, "百分比", round(npPercentageScore[i]*100), "%")
     # 计算需要填写的列在表格中的列序号
     index1 = list(dfFinal.columns).index('总成绩全国%')
 
@@ -300,6 +301,60 @@ def TotalPercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本级别本组�
         if i-j>=nStudentCount: break
     return 0
 
+def ProvincePercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本省本级别本组别的省内百分比成绩
+    global dfFinal
+    # 是否打开调试输出
+    isDebug = True
+    # 从总体数据中取出当前级别的成绩数据
+    dfJiBieZuBie = dfFinal[dfFinal["级别"] == sJiBie]
+    # 进一步选出当前组别的成绩数据
+    dfJiBieZuBie = dfJiBieZuBie[dfJiBieZuBie["组别"] == sZuBie]
+    # 核算当前级别组别总人数
+    nStudentCount = len(dfJiBieZuBie)
+    if isDebug : print("Debug Info ->", "计算省内百分比成绩", sJiBie, sZuBie, "总人数：", nStudentCount)
+
+    # 按当前级别省份、总成绩排序
+    dfJiBieZuBie = dfJiBieZuBie.sort_values(by=['省份', '总成绩'])
+
+    # 定义当前级别组别的省内%成绩
+    npPercentageScore = np.zeros(dfJiBieZuBie.shape[0])
+    for i in range(nStudentCount)
+        sShengFen = dfJiBieZuBie[i]['省份']
+    ##############################
+    # 分数最高的学生，%成绩永远是99%，不论本组有多少人
+    npPercentageScore[nStudentCount - 1] = 0.99
+    for i in range(nStudentCount - 2, -1, -1) :
+        if dfJiBieZuBie.iloc[i]['总成绩'] == dfJiBieZuBie.iloc[i + 1]['总成绩'] :
+            npPercentageScore[i] = npPercentageScore[i + 1]
+            if isDebug : print("Debug Info ->", "分数并列，与上一人同样百分比", "序列号", i, "百分比", round(npPercentageScore[i] * 100),
+                               "%")
+        else :
+            npPercentageScore[i] = math.floor((i + 1) / nStudentCount * 100) / 100
+            # 做边界处理，避免向下取整之后，小于1%的成绩被写为0%
+            if npPercentageScore[i] == 0.00 : npPercentageScore[i] = 0.01
+            if isDebug : print("Debug Info ->", "分数不同，计算新百分比", "序列号", i, "百分比", round(npPercentageScore[i] * 100), "%")
+    # 计算需要填写的列在表格中的列序号
+    index1 = list(dfFinal.columns).index('总成绩全国%')
+
+    # 成绩表排序
+    dfFinal = dfFinal.sort_values(by=['级别', '组别', '总成绩'])
+    # 组合选择题成绩进入原成绩数据
+    i = 0
+    # 跳过所有非本级别
+    while dfFinal.iloc[i]['级别'] != sJiBie :
+        i += 1
+    # 跳过所有非本组别
+    while dfFinal.iloc[i]['组别'] != sZuBie :
+        i += 1
+    j = i
+    # 填写本级别本组别全国百分比成绩数据
+    while dfFinal.iloc[i]['级别'] == sJiBie and dfFinal.iloc[i]['组别'] == sZuBie :
+        if isDebug : print("Debug Info ->", "填写本级别本组别百分比成绩", i, j, dfFinal.iloc[i]['级别'])
+        dfFinal.iloc[i, index1] = format(npPercentageScore[i - j], ".0%")
+        i += 1
+        if i - j >= nStudentCount : break
+
+    return 0
 # 主程序起点----------------------------------------------------------------------
 # 调用选择题判卷函数
 MarkingChoice()
@@ -327,6 +382,14 @@ dfFinal["总成绩全国%"] = 0
 TotalScore()
 TotalPercentage("初级", "Python")
 TotalPercentage("初级", "Scratch")
+TotalPercentage("中级", "Python")
+TotalPercentage("中级", "Scratch")
+TotalPercentage("高级", "Python")
+TotalPercentage("高级", "Scratch")
+
+# 计算分省百分比成绩
+dfFinal['总成绩省内%']
+ProvincePercentage()
 
 # 将判卷结果写入中间文件file3
 print("writing excel file...")
