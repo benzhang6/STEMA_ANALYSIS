@@ -29,6 +29,7 @@ paraMu: int = (paraHighScore + paraLowScore) / 2
 paraSigma: int = 43
 
 # 设置全局成绩文件名
+file1 = "200112-1-收到汇总.xlsx"
 file2 = "200112-2-整理去除项.xlsx"
 file3 = "200112-3-分数评判.xlsx"
 file4 = "200112-4-发布成绩.xlsx"
@@ -318,26 +319,41 @@ def ProvincePercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本省本级�
 
     # 定义当前级别组别的省内%成绩
     npPercentageScore = np.zeros(dfJiBieZuBie.shape[0])
-    for i in range(nStudentCount)
-        sShengFen = dfJiBieZuBie[i]['省份']
-    ##############################
-    # 分数最高的学生，%成绩永远是99%，不论本组有多少人
-    npPercentageScore[nStudentCount - 1] = 0.99
-    for i in range(nStudentCount - 2, -1, -1) :
-        if dfJiBieZuBie.iloc[i]['总成绩'] == dfJiBieZuBie.iloc[i + 1]['总成绩'] :
-            npPercentageScore[i] = npPercentageScore[i + 1]
-            if isDebug : print("Debug Info ->", "分数并列，与上一人同样百分比", "序列号", i, "百分比", round(npPercentageScore[i] * 100),
-                               "%")
-        else :
-            npPercentageScore[i] = math.floor((i + 1) / nStudentCount * 100) / 100
-            # 做边界处理，避免向下取整之后，小于1%的成绩被写为0%
-            if npPercentageScore[i] == 0.00 : npPercentageScore[i] = 0.01
-            if isDebug : print("Debug Info ->", "分数不同，计算新百分比", "序列号", i, "百分比", round(npPercentageScore[i] * 100), "%")
+    # 获得省份列表与计数序列
+    seriesShengFen = dfJiBieZuBie['省份'].value_counts()
+    if isDebug :
+        print("Debug Info ->", "本级别组别包括省份", seriesShengFen.size, "个")
+        print(seriesShengFen)
+    # i为当前级别组别省内第一名学生序号
+    nShengNeiFirst = 0
+    # 每个i循环处理一个省份
+    for i in range(seriesShengFen.size) :
+        # 当前i循环所处理的省份
+        sShengFen = dfJiBieZuBie.iloc[nShengNeiFirst]['省份']
+        if isDebug : print("Debug Info ->", "当前处理省份：", sShengFen)
+        # 当前省份学生数量
+        nShengNeiCount = seriesShengFen[sShengFen]
+        npPercentageScore[nShengNeiCount+nShengNeiFirst-1] = 0.99
+        if isDebug : print("Debug Info ->", "当前省份第一人，成绩为99%", "序列号", nShengNeiCount+nShengNeiFirst-1, "百分比", "99%")
+        for j in range(nShengNeiCount+nShengNeiFirst-2, nShengNeiFirst-1, -1) :
+            # 每个j循环处理一个学生
+            if dfJiBieZuBie.iloc[j]['总成绩'] == dfJiBieZuBie.iloc[j+1]['总成绩'] :
+                # 分数与上一人并列
+                npPercentageScore[j] = npPercentageScore[j+1]
+                if isDebug : print("Debug Info ->", "分数并列，与上一人同样百分比", "序列号", j, "百分比", round(npPercentageScore[j] * 100), "%")
+            else :
+                # 分数与上一人不同
+                npPercentageScore[j] = math.floor((j-nShengNeiFirst+1) / nShengNeiCount * 100) / 100
+                # 做边界处理，避免向下取整之后，小于1%的成绩被写为0%
+                if npPercentageScore[j] == 0.00 : npPercentageScore[j] = 0.01
+                if isDebug : print("Debug Info ->", "分数不同，计算新百分比", "序列号", j, "百分比", round(npPercentageScore[j] * 100), "%")
+        nShengNeiFirst += nShengNeiCount
+
     # 计算需要填写的列在表格中的列序号
-    index1 = list(dfFinal.columns).index('总成绩全国%')
+    index1 = list(dfFinal.columns).index('总成绩省内%')
 
     # 成绩表排序
-    dfFinal = dfFinal.sort_values(by=['级别', '组别', '总成绩'])
+    dfFinal = dfFinal.sort_values(by=['级别', '组别', '省份', '总成绩'])
     # 组合选择题成绩进入原成绩数据
     i = 0
     # 跳过所有非本级别
@@ -347,15 +363,35 @@ def ProvincePercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本省本级�
     while dfFinal.iloc[i]['组别'] != sZuBie :
         i += 1
     j = i
-    # 填写本级别本组别全国百分比成绩数据
     while dfFinal.iloc[i]['级别'] == sJiBie and dfFinal.iloc[i]['组别'] == sZuBie :
-        if isDebug : print("Debug Info ->", "填写本级别本组别百分比成绩", i, j, dfFinal.iloc[i]['级别'])
+        if isDebug : print("Debug Info ->", "填写本级别本组别省内百分比成绩", "总序号", i, "组内起始", j, "成绩", format(npPercentageScore[i - j], ".0%"))
         dfFinal.iloc[i, index1] = format(npPercentageScore[i - j], ".0%")
         i += 1
         if i - j >= nStudentCount : break
-
     return 0
+
+def LanQiaoAward(top1:float, provincial1:float, provincial2:float, provincial3:float, provincial4:float) :
+    global dfFinal
+    global nTotal
+
+    # 计算需要填写的列在表格中的列序号
+    index1 = list(dfFinal.columns).index('蓝桥杯推荐')
+
+    for i in range(nTotal) :
+        if float(dfFinal.iloc[i]['总成绩省内%'].strip("%"))/100 >= 1-provincial1 :
+            dfFinal.iloc[i, index1] = "省赛一等奖，推荐参加国赛"
+        elif float(dfFinal.iloc[i]['总成绩省内%'].strip("%"))/100 >= 1-provincial2 :
+            dfFinal.iloc[i, index1] = "地区选拔赛二等奖，推荐参加省赛"
+        elif float(dfFinal.iloc[i]['总成绩省内%'].strip("%"))/100 >= 1-provincial3 :
+            dfFinal.iloc[i, index1] = "地区选拔赛三等奖，推荐参加省赛"
+        elif float(dfFinal.iloc[i]['总成绩省内%'].strip("%"))/100 >= 1-provincial4 :
+            dfFinal.iloc[i, index1] = "地区选拔赛优秀奖，推荐参加省赛"
+        if float(dfFinal.iloc[i]['总成绩全国%'].strip("%"))/100 >= 1-top1 :
+            dfFinal.iloc[i, index1] = "TOP1%，省赛一等奖，推荐参加国赛"
+    return 0
+
 # 主程序起点----------------------------------------------------------------------
+
 # 调用选择题判卷函数
 MarkingChoice()
 
@@ -388,11 +424,32 @@ TotalPercentage("高级", "Python")
 TotalPercentage("高级", "Scratch")
 
 # 计算分省百分比成绩
-dfFinal['总成绩省内%']
-ProvincePercentage()
+dfFinal['总成绩省内%'] = 0
+ProvincePercentage("初级", "Python")
+ProvincePercentage("初级", "Scratch")
+ProvincePercentage("中级", "Python")
+ProvincePercentage("中级", "Scratch")
+ProvincePercentage("高级", "Python")
+ProvincePercentage("高级", "Scratch")
+
+# 计算等同蓝桥杯奖项
+dfFinal['蓝桥杯推荐'] = ""
+LanQiaoAward(0.01, 0.15, 0.30, 0.60, 0.80)
 
 # 将判卷结果写入中间文件file3
-print("writing excel file...")
-dfFinal.to_excel(file3, sheet_name='Result')
+print("写入分数评判文件...", file3)
+dfFinal.to_excel(file3, sheet_name='阅卷结果')
+
+# 将发布成绩写入file4
+print("写入发布成绩文件...", file4)
+excelWriter = pd.ExcelWriter(file4)
+dfPublish = dfFinal[['姓名', '第一部分成绩', '第一部分全国%', '第二部分成绩', '第二部分全国%', '总成绩', '总成绩全国%', '总成绩省内%', '蓝桥杯推荐', '省份', '考点', '级别', '组别' ]]
+dfPublish = dfPublish.sort_values(by=['级别', '组别', '省份', '总成绩'], ascending=False)
+dfPublish.to_excel(excelWriter, sheet_name='发布成绩')
+dfQuChu = pd.read_excel(file2, "去除项", index_col='准考证号')
+dfQuChu.to_excel(excelWriter, sheet_name='去除项')
+excelWriter.save()
+excelWriter.close()
+
 # 主程序终点----------------------------------------------------------------------
 
