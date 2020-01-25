@@ -10,6 +10,20 @@ from scipy import stats
 # 第2次 2020 01 12
 paraNoOfTest = 2
 
+# 设置全局成绩文件名
+if paraNoOfTest == 1 :
+    file1 = "191215-1-收到汇总.xlsx"
+    file2 = "191215-2-整理去除项.xlsx"
+    file3 = "191215-3-分数评判.xlsx"
+    file4 = "191215-4-发布成绩.xlsx"
+    file5 = "191215-5-分析基础.xlsx"
+elif paraNoOfTest == 2 :
+    file1 = "200112-1-收到汇总.xlsx"
+    file2 = "200112-2-整理去除项.xlsx"
+    file3 = "200112-3-分数评判.xlsx"
+    file4 = "200112-4-发布成绩.xlsx"
+    file5 = "200112-5-分析基础.xlsx"
+
 # 时间偏移设置
 paraTime = (paraNoOfTest - 1) * 2
 
@@ -26,23 +40,31 @@ paraScoreStep = 5
 # 正态分布平均值
 paraMu: int = (paraHighScore + paraLowScore) / 2
 # 正态分布方差
-paraSigma: int = 43
-
-# 设置全局成绩文件名
-file1 = "200112-1-收到汇总.xlsx"
-file2 = "200112-2-整理去除项.xlsx"
-file3 = "200112-3-分数评判.xlsx"
-file4 = "200112-4-发布成绩.xlsx"
+paraSigma: int = math.ceil(0.841*(paraHighScore-paraLowScore)/4)
 
 # 设置成绩处理数据结构
-print("Debug Info ->", "读取 汇总答案...")
+print("Program Info ->", "读取 汇总答案...")
 dfFinal = pd.read_excel(file2, "汇总答案", index_col="准考证号")
 nTotal = len(dfFinal)
-print("Debug Info ->", "核算 答案总人数：", nTotal)
+print("Program Info ->", "核算 答案总人数：", nTotal)
 
-# 选择题阅卷
-def MarkingChoice() : # 本函数功能 - 选择题判卷
+# 本函数功能 - 检查数据完整性
+def CheckData() :
+    # 编程题总分不会超过128分
+    # 初级组编程没有第五题
+    # 级别不能有 初级 中级 高级 以外
+    # 组别不能有 Python Scratch 以外
+    # 警告 选择题全空
+    # 警告 编程题全空
+
+    return 0
+
+# 本函数功能 - 选择题判卷
+def MarkingChoice() :
     global dfFinal
+    # 是否打开调试输出
+    isDebug = False
+
     # 读取答案表
     dfChujiDaan = pd.read_excel(file2, sheet_name="初级组选择答案")
     dfZhongjiDaan = pd.read_excel(file2, sheet_name="中高级组选择答案")
@@ -51,8 +73,10 @@ def MarkingChoice() : # 本函数功能 - 选择题判卷
     npNewScore = np.zeros(dfFinal.shape[0])
     npIsCorrect = np.zeros(dfFinal.shape[0])
 
-    #定义需要详细审查（即输出Debug信息）的学生序号
+    # 定义需要详细审查（即输出Debug信息）的学生序号
     lStudent = []
+
+    print("Program Info ->", "进入MarkingChoice()函数 开始选择题目判分", "答案总人数：", nTotal)
 
     # 选择题判分
     for j in range(0, nTotal) :
@@ -67,7 +91,7 @@ def MarkingChoice() : # 本函数功能 - 选择题判卷
                 else :
                     nZongfen -= 1
                 if j in lStudent :
-                    print("Debug Info ->", "题目", i, "学生答案", dfFinal.iloc[j]['答案' + str(i)], "正确答案", dfChujiDaan.iloc[0]['答案' + str(i)], "原分数", dfFinal.iloc[j]['选择' + str(i)], "现总分", nZongfen)
+                    if isDebug : print("Debug Info ->", "题目", i, "学生答案", dfFinal.iloc[j]['答案' + str(i)], "正确答案", dfChujiDaan.iloc[0]['答案' + str(i)], "原分数", dfFinal.iloc[j]['选择' + str(i)], "现总分", nZongfen)
         #中高级组选择题判分
         else :
             for i in range(9, 73) :
@@ -78,7 +102,7 @@ def MarkingChoice() : # 本函数功能 - 选择题判卷
                 else :
                     nZongfen -= 1
                 if j in lStudent :
-                    print("Debug Info ->", "题目", i, "学生答案", dfFinal.iloc[j]['答案' + str(i)], "正确答案", dfZhongjiDaan.iloc[0]['答案' + str(i)], "原分数", dfFinal.iloc[j]['选择' + str(i)], "现总分", nZongfen)
+                    if isDebug : print("Debug Info ->", "题目", i, "学生答案", dfFinal.iloc[j]['答案' + str(i)], "正确答案", dfZhongjiDaan.iloc[0]['答案' + str(i)], "原分数", dfFinal.iloc[j]['选择' + str(i)], "现总分", nZongfen)
         #判分结果与原有Excel表中判分结果是否相同
         if nZongfen != int(dfFinal.iloc[j]['选择总分']) :
             npIsCorrect[j] = False
@@ -87,8 +111,11 @@ def MarkingChoice() : # 本函数功能 - 选择题判卷
         #记录新计算选择题分数
         npNewScore[j] = nZongfen
         #显示新计算成绩与原成绩不一致的项目
-        if not npIsCorrect[j] :
+
+        if isDebug :
             print("Debug Info ->", "正在处理", j, "正确" if npIsCorrect[j] else "错误", "原成绩：", dfFinal.iloc[j]['选择总分'], "现成绩：", nZongfen)
+        else :
+            if not npIsCorrect[j] : print("Program Info ->", "正在处理", j, "正确" if npIsCorrect[j] else "错误", "原成绩：", dfFinal.iloc[j]['选择总分'], "现成绩：", nZongfen)
 
     dfFinal.insert(0, '新计算选择总成绩', npNewScore)
     dfFinal.insert(0, '正确与否', npIsCorrect)
@@ -98,12 +125,13 @@ def MarkingChoice() : # 本函数功能 - 选择题判卷
 def CurveChoice(sJiBie) : # 本函数功能 - 选择题核算发布分数，曲率计算
     global dfFinal
     # 是否打开调试输出
-    isDebug = True
+    isDebug = False
+
     # 从总体数据中取出当前级别的成绩数据
     dfJiBie = dfFinal[dfFinal["级别"] == sJiBie]
     # 核算当前级别总人数
     nStudentCount = len(dfJiBie)
-    if isDebug : print("Debug Info ->", "进入CurveChoice()函数", sJiBie, "总人数：", nStudentCount)
+    print("Program Info ->", "进入CurveChoice()函数 开始选择曲率判分", sJiBie, "总人数：", nStudentCount)
     # 按当前级别选择题成绩排序
     dfJiBie = dfJiBie.sort_values(by='新计算选择总成绩')
 
@@ -162,18 +190,22 @@ def CurveChoice(sJiBie) : # 本函数功能 - 选择题核算发布分数，曲�
         i += 1
         # 避免i超出学生总数，在上面while语句判断时产生下标益处
         if i-j>=nStudentCount: break
+
     return 0
 
-def CurveProgram(sJiBie, sZuBie) : # 本函数功能 - 编程题核算发布分数，曲率计算
-
+# 本函数功能 - 编程题核算发布分数，曲率计算
+def CurveProgram(sJiBie, sZuBie) :
     global dfFinal
+    # 是否打开调试输出
+    isDebug = False
+
     # 从总体数据中取出当前级别的成绩数据
     dfJiBieZuBie = dfFinal[dfFinal["级别"] == sJiBie]
     # 进一步选出当前组别的成绩数据
     dfJiBieZuBie = dfJiBieZuBie[dfJiBieZuBie["组别"] == sZuBie]
     # 核算当前级别组别总人数
     nStudentCount = len(dfJiBieZuBie)
-    print("Debug Info ->", sJiBie, sZuBie, "总人数：", nStudentCount)
+    print("Program Info ->", "进入CurveProgram()函数 开始编程曲率判分", sJiBie, sZuBie, "总人数：", nStudentCount)
     # 按当前级别编程题成绩排序
     dfJiBieZuBie = dfJiBieZuBie.sort_values(by='编程总分')
 
@@ -185,25 +217,25 @@ def CurveProgram(sJiBie, sZuBie) : # 本函数功能 - 编程题核算发布分�
     for j in range(paraLowScore, paraHighScore, paraScoreStep) :
         # tmpPercentage 为当前分数j在正态后所处的百分比
         tmpPercentage = stats.norm.cdf(j, paraMu, paraSigma)
-        print("Debug Info ->", "进入新分数段", "序号", i, "成绩", j, round(stats.norm.cdf(j, paraMu, paraSigma) * 100, 1), "%")
+        if isDebug : print("Debug Info ->", "进入新分数段", "序号", i, "成绩", j, round(stats.norm.cdf(j, paraMu, paraSigma) * 100, 1), "%")
         # 如果当前学生排名位置小于此百分比，意即学生应该得此分数
         while ((i+1)/nStudentCount) < tmpPercentage :
-            print("Debug Info ->", "填充分数", "序号", i, "成绩", j)
+            if isDebug : print("Debug Info ->", "填充分数", "序号", i, "成绩", j)
             npCurveScore[i] = j
             i += 1
         # 除第一个学生外，超过此百分比，但和前一名学生分数一样的情况，也赋予同样分数
         if i > 0 :
             while (dfJiBieZuBie.iloc[i]['编程总分'] == dfJiBieZuBie.iloc[i-1]['编程总分']) :
-                print("Debug Info ->", "成绩相同并列填充", "序号", i, "成绩", j)
+                if isDebug : print("Debug Info ->", "成绩相同并列填充", "序号", i, "成绩", j)
                 npCurveScore[i] = j
                 i += 1
                 # break的目的是避免i超出学生总数，在上面while语句判断时产生下标溢出
                 if i>=nStudentCount: break
         if i>=nStudentCount : break
     # 如果上述计算结束，仍有部分学生没有分数，均赋予并列最高分
-    print("Debug Info ->", i, "正态分布99%外获得最高分的学生人数：", nStudentCount-i, "分数：",j)
+    if isDebug : print("Debug Info ->", i, "正态分布99%外获得最高分的学生人数：", nStudentCount-i, "分数：",j)
     while i < nStudentCount :
-        print("Debug Info ->", "正态99%外填充", "序号", i, "成绩", j)
+        if isDebug : print("Debug Info ->", "正态99%外填充", "序号", i, "成绩", j)
         npCurveScore[i] = j
         i += 1
 
@@ -241,9 +273,13 @@ def CurveProgram(sJiBie, sZuBie) : # 本函数功能 - 编程题核算发布分�
         if i-j>=nStudentCount: break
     return 0
 
-def TotalScore() : # 本函数功能 - 计算所有人总分，并写入全局变量dfFinal
+# 本函数功能 - 计算所有人总分，并写入全局变量dfFinal
+def TotalScore() :
     global dfFinal
     global nTotal
+
+    print("Program Info ->", "进入TotalScore()函数，计算总成绩", "答案总人数:", nTotal)
+
     # 计算需要填写的列在表格中的列序号
     index1 = list(dfFinal.columns).index('总成绩')
 
@@ -252,17 +288,19 @@ def TotalScore() : # 本函数功能 - 计算所有人总分，并写入全局�
 
     return 0
 
-def TotalPercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本级别本组别的全国百分比成绩
+# 本函数功能 - 计算本级别本组别的全国百分比成绩
+def TotalPercentage(sJiBie, sZuBie) :
     global dfFinal
     # 是否打开调试输出
-    isDebug = True
+    isDebug = False
+
     # 从总体数据中取出当前级别的成绩数据
     dfJiBieZuBie = dfFinal[dfFinal["级别"] == sJiBie]
     # 进一步选出当前组别的成绩数据
     dfJiBieZuBie = dfJiBieZuBie[dfJiBieZuBie["组别"] == sZuBie]
     # 核算当前级别组别总人数
     nStudentCount = len(dfJiBieZuBie)
-    if isDebug : print("Debug Info ->", "计算全国百分比成绩", sJiBie, sZuBie, "总人数：", nStudentCount)
+    print("Program Info ->", "进入TotalPercentage()函数，计算全国百分比成绩", sJiBie, sZuBie, "总人数：", nStudentCount)
 
     # 按当前级别总成绩排序
     dfJiBieZuBie = dfJiBieZuBie.sort_values(by='总成绩')
@@ -300,19 +338,22 @@ def TotalPercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本级别本组�
         dfFinal.iloc[i, index1] = format(npPercentageScore[i-j], ".0%")
         i += 1
         if i-j>=nStudentCount: break
+
     return 0
 
-def ProvincePercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本省本级别本组别的省内百分比成绩
+# 本函数功能 - 计算本省本级别本组别的省内百分比成绩
+def ProvincePercentage(sJiBie, sZuBie) :
     global dfFinal
     # 是否打开调试输出
-    isDebug = True
+    isDebug = False
+
     # 从总体数据中取出当前级别的成绩数据
     dfJiBieZuBie = dfFinal[dfFinal["级别"] == sJiBie]
     # 进一步选出当前组别的成绩数据
     dfJiBieZuBie = dfJiBieZuBie[dfJiBieZuBie["组别"] == sZuBie]
     # 核算当前级别组别总人数
     nStudentCount = len(dfJiBieZuBie)
-    if isDebug : print("Debug Info ->", "计算省内百分比成绩", sJiBie, sZuBie, "总人数：", nStudentCount)
+    print("Program Info ->", "进入ProvincePercentage()函数，计算省内百分比成绩", sJiBie, sZuBie, "总人数：", nStudentCount)
 
     # 按当前级别省份、总成绩排序
     dfJiBieZuBie = dfJiBieZuBie.sort_values(by=['省份', '总成绩'])
@@ -368,11 +409,15 @@ def ProvincePercentage(sJiBie, sZuBie) : # 本函数功能 - 计算本省本级�
         dfFinal.iloc[i, index1] = format(npPercentageScore[i - j], ".0%")
         i += 1
         if i - j >= nStudentCount : break
+
     return 0
 
+# 填写相应的蓝桥杯竞赛级别
 def LanQiaoAward(top1:float, provincial1:float, provincial2:float, provincial3:float, provincial4:float) :
     global dfFinal
     global nTotal
+
+    print("Program Info ->", "进入LanQiaoAward()函数，计算蓝桥对应奖项", "答案总人数：", nTotal)
 
     # 计算需要填写的列在表格中的列序号
     index1 = list(dfFinal.columns).index('蓝桥杯推荐')
@@ -388,10 +433,13 @@ def LanQiaoAward(top1:float, provincial1:float, provincial2:float, provincial3:f
             dfFinal.iloc[i, index1] = "地区选拔赛优秀奖，推荐参加省赛"
         if float(dfFinal.iloc[i]['总成绩全国%'].strip("%"))/100 >= 1-top1 :
             dfFinal.iloc[i, index1] = "TOP1%，省赛一等奖，推荐参加国赛"
+
     return 0
 
 # 主程序起点----------------------------------------------------------------------
 
+# 检查数据完整性
+CheckData()
 # 调用选择题判卷函数
 MarkingChoice()
 
@@ -451,5 +499,23 @@ dfQuChu.to_excel(excelWriter, sheet_name='去除项')
 excelWriter.save()
 excelWriter.close()
 
-# 主程序终点----------------------------------------------------------------------
+# 写入分析基础数据文件，供未来分析使用
+print("写入发布成绩文件...", file5)
+# 选取需要的列
+lColumns = ['姓名', '省份', '考点', '级别', '组别', '第一部分成绩', '第一部分全国%', '第二部分成绩', '第二部分全国%', '总成绩', '总成绩全国%', '总成绩省内%']
+for i in range (1, 73) :
+    lColumns.append("答案"+str(i))
+for i in range (1, 6) :
+    lColumns.append("编程"+str(i))
+dfPublish = dfFinal[lColumns]
+# 写入文件
+excelWriter = pd.ExcelWriter(file5)
+dfPublish.to_excel(excelWriter, sheet_name='分析基础')
+dfChuJiDaAn = pd.read_excel(file2, "初级组选择答案")
+dfZhongGaoiDaAn = pd.read_excel(file2, "中高级组选择答案")
+dfChuJiDaAn.to_excel(excelWriter, sheet_name='初级组选择答案')
+dfZhongGaoiDaAn.to_excel(excelWriter, sheet_name='中高级组选择答案')
+excelWriter.save()
+excelWriter.close()
 
+# 主程序终点----------------------------------------------------------------------
