@@ -10,17 +10,17 @@ import math
 from numpy.core._multiarray_umath import ndarray
 from pandas import DataFrame
 
-dateTest = {1 : "2019-12-15", 2 : "2020-01-12"}
+dateTest = {1 : "2020-5-30"}
 
 # 设置考试数据分析基础文件的文件名
-fileAnalysisInput = {1 : "191215-5-分析基础.xlsx", 2 : "200112-5-分析基础.xlsx"}
+fileAnalysisInput = {1 : "200530-5-分析基础.xlsx"}
 dfAnalysisInput = list()
 for i in range(len(fileAnalysisInput)) :
     print("Program Info ->", "考试序号", i, "考试日期", dateTest[i + 1], "文件名称", fileAnalysisInput[i + 1])
     dfAnalysisInput.append(pd.read_excel(fileAnalysisInput[i + 1], "分析基础", index_col="准考证号"))
 
 # 设置考试数据分析基础文件的文件
-fileAnalysisOutput = {1 : "191215-6-分析结果.xlsx", 2 : "200112-6-分析结果.xlsx"}
+fileAnalysisOutput = {1 : "200530-6-分析结果.xlsx"}
 excelWriter = list()
 for i in range(len(fileAnalysisOutput)) :
     excelWriter.append(pd.ExcelWriter(fileAnalysisOutput[i + 1]))
