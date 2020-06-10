@@ -3,70 +3,52 @@
 import pandas as pd
 from openpyxl import Workbook
 
+
+def columndist(header):
+    # get corresponding row from input Dataframe
+    lstColumnRaw = dfInput[header]
+    # generate distribution dictionary
+    outputdict = dict()
+    for i in lstColumnRaw:
+        if i in outputdict:
+            outputdict[i] += 1
+        else:
+            outputdict[i] = 1
+    return outputdict
+
+
+def dicttoexcel(dictname,sheetname,indexheader,valueheader):
+    # Create sheet and write headers
+    wsTemp = wbOutput.create_sheet(title=sheetname)
+    wsTemp.cell(column=1, row=1, value=indexheader)
+    wsTemp.cell(column=2, row=1, value=valueheader)
+    # Write dictionary index vertically starting from row 2
+    tempRow = 2
+    for i in dictname:
+        wsTemp.cell(column=1, row=tempRow, value=i)
+        tempRow += 1
+    # Write dictionary values vertically starting from row 2
+    tempRow = 2
+    for i in dictname:
+        wsTemp.cell(column=2, row=tempRow, value=dictname[i])
+        tempRow += 1
+
+
 # Debug switch
-isDebug = True
+isDebug = False
 
 # Set input file (single file only) and create output workbook
-dfInput = pd.read_excel("200530-5-分析基础.xlsx", read_only=True)
+dfInput = pd.read_excel("200608-报名原始数据.xls", read_only=True)
 wbOutput = Workbook()
-wsProvince = wbOutput.active
-wsProvince.title = "省份与城市信息"
 
-# Create Province Distribution Dictionary from dfInput
-lstProvinceRaw = dfInput["省份"]
-dictProvinceFreq = {}
-for i in lstProvinceRaw:
-    if i in dictProvinceFreq:
-        dictProvinceFreq[i] += 1
-    else:
-        dictProvinceFreq[i] = 1
-if isDebug:
-    print("Province Frequency Dictionary", dictProvinceFreq)
+dictProvinceDist = columndist("省")
+dicttoexcel(dictProvinceDist, "省份统计", "省份", "人数")
 
-# Write Dictionary into Excel
-# Write headers
-wsProvince.cell(column=1, row=1, value="省份")
-wsProvince.cell(column=2, row=1, value="人数")
-# Initialize starting row
-tempRow = 2
-# Write in Dictionary Index
-for i in dictProvinceFreq:
-    wsProvince.cell(column=1, row=tempRow, value=i)
-    tempRow += 1
-# Reset starting row
-tempRow = 2
-# Write in Dictionary Value
-for i in dictProvinceFreq:
-    wsProvince.cell(column=2, row=tempRow, value=dictProvinceFreq[i])
-    tempRow += 1
+dictCompetitionDist = columndist("matchname")
+dicttoexcel(dictCompetitionDist, "赛事统计", "赛事名称", "人数")
 
-# Create City Distribution Dictionary from dfInput
-lstCityRaw = dfInput["考点"]
-dictCityFreq = {}
-for i in lstCityRaw:
-    if i in dictCityFreq:
-        dictCityFreq[i] += 1
-    else:
-        dictCityFreq[i] = 1
-if isDebug:
-    print("City Frequency Dictionary", dictCityFreq)
+dictOrganizationDist = columndist("机构")
+dicttoexcel(dictOrganizationDist, "机构统计", "机构名称", "人数")
 
-# Write Dictionary into Excel
-# Write Headers
-wsProvince.cell(column=4, row=1, value="城市")
-wsProvince.cell(column=5, row=1, value="人数")
-# Reset starting row
-tempRow = 2
-# Write in Dictionary Index
-for i in dictCityFreq:
-    wsProvince.cell(column=4, row=tempRow, value=i)
-    tempRow += 1
-# Reset Starting Row
-tempRow = 2
-# Write in Dictionary Value
-for i in dictCityFreq:
-    wsProvince.cell(column=5, row=tempRow, value=dictCityFreq[i])
-    tempRow += 1
-
-# Save File
-wbOutput.save(filename="200530-0-省份与地区测试文件.xlsx")
+# Save workbook
+wbOutput.save(filename="200608-0-测试文件.xlsx")
