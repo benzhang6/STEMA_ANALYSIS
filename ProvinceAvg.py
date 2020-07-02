@@ -63,7 +63,7 @@ def dictindextorows(dictname, startingrow, startingcolumn):
 
 def scoreaddup(column1, column2, outputcolumn):
     for i in range(35):
-            wsMain.cell(i + 2, outputcolumn, value=(int(wsMain.cell(i + 2, column1).value) + int(wsMain.cell(i + 2, column2).value)))
+            wsMain.cell(i + 2, outputcolumn, value=(wsMain.cell(i + 2, column1).value + wsMain.cell(i + 2, column2).value))
 
 
 isDebug = False
